@@ -20,6 +20,9 @@ ARG USE_TIKTOKEN_ENCODING_NAME="cl100k_base"
 
 ARG BUILD_HASH=dev-build
 ARG BUILD_CHANNEL=unknown
+# Node.js heap limit for the frontend build; `vite build` needs well over Node's ~4GB default.
+# Lower with --build-arg NODE_MAX_OLD_SPACE_SIZE=8192 on hosts with less RAM.
+ARG NODE_MAX_OLD_SPACE_SIZE=12288
 # Override at your own risk - non-root configurations are untested
 ARG UID=0
 ARG GID=0
@@ -31,9 +34,10 @@ ARG BUILD_CHANNEL
 ARG USE_SLIM
 ARG UID
 ARG GID
+ARG NODE_MAX_OLD_SPACE_SIZE
 
-# Set Node.js options (heap limit Allocation failed - JavaScript heap out of memory)
-# ENV NODE_OPTIONS="--max-old-space-size=4096"
+# Raise the V8 heap limit (default ~4GB) to avoid "JavaScript heap out of memory" during vite build
+ENV NODE_OPTIONS="--max-old-space-size=${NODE_MAX_OLD_SPACE_SIZE}"
 
 WORKDIR /app
 
