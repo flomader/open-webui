@@ -5,6 +5,7 @@
 	import { getContext, onMount, tick } from 'svelte';
 
 	import { formatFileSize, getLineCount, safeLinkUrl } from '$lib/utils';
+	import { isMarkdownFile } from '$lib/utils/filePreview';
 	import { WEBUI_API_BASE_URL } from '$lib/constants';
 	import { settings } from '$lib/stores';
 	import { getKnowledgeById } from '$lib/apis/knowledge';
@@ -70,9 +71,10 @@
 		item?.meta?.content_type === 'application/pdf' ||
 		(item?.name && item?.name.toLowerCase().endsWith('.pdf'));
 
-	$: isMarkdown =
-		item?.meta?.content_type === 'text/markdown' ||
-		(item?.name && item?.name.toLowerCase().endsWith('.md'));
+	$: isMarkdown = isMarkdownFile(
+		item?.name ?? '',
+		item?.meta?.content_type ?? item?.file?.meta?.content_type ?? ''
+	);
 
 	$: isCode =
 		item?.name &&

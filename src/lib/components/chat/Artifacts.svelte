@@ -22,6 +22,7 @@
 	import SvgPanZoom from '../common/SVGPanZoom.svelte';
 	import ArrowLeft from '../icons/ArrowLeft.svelte';
 	import Download from '../icons/Download.svelte';
+	import FilePreview from './FileNav/FilePreview.svelte';
 
 	export let overlay = false;
 
@@ -80,11 +81,14 @@
 	};
 
 	const downloadArtifact = () => {
-		const blob = new Blob([contents[selectedContentIdx].content], { type: 'text/html' });
+		const isMarkdown = contents[selectedContentIdx].type === 'markdown';
+		const blob = new Blob([contents[selectedContentIdx].content], {
+			type: isMarkdown ? 'text/markdown' : 'text/html'
+		});
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
 		a.href = url;
-		a.download = `artifact-${$chatId}-${selectedContentIdx}.html`;
+		a.download = `artifact-${$chatId}-${selectedContentIdx}.${isMarkdown ? 'md' : 'html'}`;
 		document.body.appendChild(a);
 		a.click();
 		document.body.removeChild(a);
@@ -203,6 +207,7 @@
 
 						<Tooltip content={$i18n.t('Download')}>
 							<button
+								aria-label={$i18n.t('Download')}
 								class=" bg-none border-none text-xs bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 transition rounded-md p-0.5"
 								on:click={downloadArtifact}
 							>
@@ -269,6 +274,15 @@
 								className=" w-full h-full max-h-full overflow-hidden"
 								svg={contents[selectedContentIdx].content}
 							/>
+						{:else if contents[selectedContentIdx].type === 'markdown'}
+							{#key selectedContentIdx}
+								<FilePreview
+									selectedFile="artifact.md"
+									fileContent={contents[selectedContentIdx].content}
+									readOnly
+									allowScripts={false}
+								/>
+							{/key}
 						{/if}
 					</div>
 				{:else}
