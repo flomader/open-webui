@@ -15,6 +15,7 @@
 	} from '$lib/stores';
 	import FloatingButtons from '../ContentRenderer/FloatingButtons.svelte';
 	import { createMessagesList, replaceOutsideCode } from '$lib/utils';
+	import { getPreviewType } from '$lib/utils/filePreview';
 
 	/**
 	 * Extracts all top-level <details>...</details> blocks from content,
@@ -140,7 +141,7 @@
 
 	let autoOpenedArtifactIds = new Set();
 
-	const hasClosingCodeFence = (raw = '') => /(?:^|\n)```[ \t]*$/.test(raw.trimEnd());
+	const hasClosingCodeFence = (raw = '') => /(?:^|\n)(?:`{3,}|~{3,})[ \t]*$/.test(raw.trimEnd());
 
 	const markdownUpdateHandler = /** @type {any} */ (
 		async (
@@ -150,7 +151,7 @@
 			const { lang = '', raw = '', text: code = '' } = token;
 			const normalizedLang = lang.toLowerCase();
 			const isArtifact =
-				['html', 'svg'].includes(normalizedLang) ||
+				getPreviewType(normalizedLang) !== null ||
 				(normalizedLang === 'xml' && code.toLowerCase().includes('<svg'));
 			const artifactId = codeBlockId || `${normalizedLang}:${raw}`;
 

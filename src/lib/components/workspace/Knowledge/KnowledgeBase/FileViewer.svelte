@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import DOMPurify from 'dompurify';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
+	import { isMarkdownFile } from '$lib/utils/filePreview';
 	import {
 		FileContentError,
 		getFileBlobById,
@@ -148,6 +149,7 @@
 				data = { fileOfficeSlides: result.images };
 			} else if (
 				mime.startsWith('text/') ||
+				isMarkdownFile(name, mime) ||
 				codeFile ||
 				/^(md|markdown|mdx|txt|csv|tsv|json|jsonc|jsonl|json5|html?|xml|ya?ml|toml|ini|log|py|js|ts|tsx|jsx|css|sh|sql|rs|go|java|c|cpp|h|ipynb)$/.test(
 					ext
@@ -157,6 +159,7 @@
 				data = { fileContent: await blob.text() };
 				if (mime === 'text/csv' && ext !== 'csv') previewName = `${name}.csv`;
 				if (mime === 'text/html' && !/^html?$/.test(ext)) previewName = `${name}.html`;
+				if (isMarkdownFile(name, mime) && !isMarkdownFile(name)) previewName = `${name}.md`;
 				if (mime.includes('json') && !/^(json|jsonc|jsonl|json5|ipynb)$/.test(ext))
 					previewName = `${name}.json`;
 				sourceToggle = /\.(md|markdown|mdx|csv|tsv|json|jsonc|jsonl|json5|html?|svg|ipynb)$/i.test(

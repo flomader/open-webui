@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { getContext, tick } from 'svelte';
-	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import { settings, config } from '$lib/stores';
 	import { injectCsp } from '$lib/utils/csp';
 	import { isCodeFile } from '$lib/utils/codeHighlight';
+	import { isMarkdownFile, renderMarkdownPreview } from '$lib/utils/filePreview';
 	import { initMermaid, renderMermaidDiagram, sanitizeSvg } from '$lib/utils';
 	import Spinner from '../../common/Spinner.svelte';
 	import PdfPagesPreview from '../../common/PdfPagesPreview.svelte';
@@ -103,13 +103,12 @@
 
 	$: isTextFile = fileContent !== null && fileImageUrl === null && filePdfData === null;
 
-	const MD_EXTS = new Set(['md', 'markdown', 'mdx']);
 	const CSV_EXTS = new Set(['csv', 'tsv']);
 	const HTML_EXTS = new Set(['html', 'htm']);
 	const JSON_EXTS = new Set(['json', 'jsonc', 'jsonl', 'json5']);
 	const getExt = (path: string | null) => path?.split('.').pop()?.toLowerCase() ?? '';
 
-	$: isMarkdown = MD_EXTS.has(getExt(selectedFile));
+	$: isMarkdown = isMarkdownFile(selectedFile ?? '');
 	$: isCsv = CSV_EXTS.has(getExt(selectedFile));
 	$: isHtml = HTML_EXTS.has(getExt(selectedFile));
 	$: isJson = JSON_EXTS.has(getExt(selectedFile));
@@ -125,10 +124,7 @@
 		isHtml && selectedFile && baseUrl && baseUrl.includes('/api/v1/terminals/')
 			? `${baseUrl}/files/serve/${selectedFile.replace(/^\//, '')}`
 			: null;
-	$: renderedHtml =
-		isMarkdown && fileContent
-			? DOMPurify.sanitize(marked.parse(fileContent, { async: false }) as string)
-			: '';
+	$: renderedHtml = isMarkdown && fileContent ? renderMarkdownPreview(fileContent) : '';
 
 	let markdownEl: HTMLDivElement;
 	let mermaidInstance: any = null;
