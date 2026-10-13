@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { extractMarkdownArtifacts } from '$lib/utils/filePreview';
+	import { extractMarkdownArtifacts, stripMarkdownArtifacts } from '$lib/utils/filePreview';
 	import { v4 as uuidv4 } from 'uuid';
 	import { toast } from 'svelte-sonner';
 
@@ -2406,10 +2406,7 @@
 					...markdownArtifacts.map(({ type, content }) => ({ type, content }))
 				];
 				const { codeBlocks: codeBlocks, htmlGroups: htmlGroups } = getCodeBlockContents(
-					markdownArtifacts.reduce(
-						(text, artifact) => text.replace(artifact.raw, ''),
-						messageContent
-					)
+					stripMarkdownArtifacts(messageContent, markdownArtifacts)
 				);
 
 				if (htmlGroups && htmlGroups.length > 0) {

@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 import {
 	extractMarkdownArtifacts,
 	getPreviewType,
 	isMarkdownFile,
-	renderMarkdownPreview
+	renderMarkdownPreview,
+	stripMarkdownArtifacts
 } from './filePreview';
 
 vi.mock('dompurify', () => ({
@@ -14,6 +16,21 @@ vi.mock('dompurify', () => ({
 beforeEach(() => {
 	vi.mocked(DOMPurify.sanitize).mockReset();
 	vi.mocked(DOMPurify.sanitize).mockImplementation((html) => String(html));
+});
+
+it('is unaffected by chat-only extensions registered on the shared marked instance', () => {
+	marked.use({
+		extensions: [
+			{
+				name: 'chatOnly',
+				level: 'inline',
+				tokenizer(src) {
+					if (src.startsWith('[^note]')) return { type: 'chatOnly', raw: '[^note]' };
+				}
+			}
+		]
+	});
+	expect(renderMarkdownPreview('Text[^note]')).toContain('<p>Text[^note]</p>');
 });
 
 describe('Markdown file eligibility', () => {
@@ -39,6 +56,25 @@ describe('Markdown file eligibility', () => {
 	])('does not treat %s with MIME type %s as Markdown', (name, mime) => {
 		expect(isMarkdownFile(name, mime)).toBe(false);
 	});
+
+	it.each([
+		'> ````md\n> # Quote\n> ```js\n> alert(1)\n> ```\n> ````',
+		'- Item\n\n  ````md\n  # List\n  ```js\n  alert(1)\n  ```\n  ````',
+		'> ```MD\r\n> # Windows\r\n> ```'
+	])(
+		'extracts nested Markdown fences without treating their code as separate artifacts',
+		(source) => {
+			const mixed = `${source}\n\n\`\`\`html\n<h1>HTML</h1>\n\`\`\``;
+			const artifacts = extractMarkdownArtifacts(mixed);
+			expect(artifacts).toHaveLength(1);
+			expect(artifacts[0].content).toContain('# ');
+			const remaining = stripMarkdownArtifacts(mixed, artifacts);
+			expect(remaining).not.toContain('```md');
+			expect(remaining).not.toContain('alert(1)');
+			expect(remaining).not.toContain('# Windows');
+			expect(remaining).toContain('```html\n<h1>HTML</h1>\n```');
+		}
+	);
 });
 
 describe('Preview action eligibility', () => {
@@ -104,7 +140,7 @@ describe('Markdown preview rendering', () => {
 			const artifacts = extractMarkdownArtifacts(source);
 			expect(artifacts).toHaveLength(1);
 			expect(artifacts[0]).toMatchObject({ type: 'markdown', content: markdown.trimEnd() });
-			const remaining = source.replace(artifacts[0].raw, '');
+			const remaining = stripMarkdownArtifacts(source, artifacts);
 			expect(remaining).toContain('```html\n<h1>HTML</h1>\n```');
 			expect(remaining).toContain('```svg\n<svg></svg>\n```');
 			expect(remaining).not.toContain('const value');

@@ -1,5 +1,7 @@
 import DOMPurify from 'dompurify';
-import { marked, type Tokens } from 'marked';
+import { Marked } from 'marked';
+
+const markdown = new Marked({ breaks: true });
 
 export const isMarkdownFile = (name = '', contentType = '') =>
 	/\.(md|markdown|mdx)$/i.test(name) ||
@@ -20,13 +22,27 @@ export const getPreviewType = (language = '') => {
 };
 
 export const renderMarkdownPreview = (content: string) =>
-	DOMPurify.sanitize(marked.parse(content, { async: false }) as string);
+	DOMPurify.sanitize(markdown.parse(content, { async: false }) as string);
 
-export const extractMarkdownArtifacts = (content: string) =>
-	marked
-		.lexer(content)
-		.filter(
-			(token): token is Tokens.Code =>
-				token.type === 'code' && getPreviewType(token.lang) === 'markdown'
-		)
-		.map((token) => ({ type: 'markdown', content: token.text, raw: token.raw }));
+export const extractMarkdownArtifacts = (content: string) => {
+	const artifacts: { type: string; content: string; raw: string }[] = [];
+	markdown.walkTokens(markdown.lexer(content), (token) => {
+		if (token.type === 'code' && getPreviewType(token.lang) === 'markdown') {
+			artifacts.push({ type: 'markdown', content: token.text, raw: token.raw });
+		}
+	});
+	return artifacts;
+};
+
+export const stripMarkdownArtifacts = (
+	content: string,
+	artifacts: ReturnType<typeof extractMarkdownArtifacts>
+) =>
+	artifacts.reduce((text, artifact) => {
+		const pattern = artifact.raw
+			.trimEnd()
+			.split('\n')
+			.map((line) => line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+			.join('\\r?\\n[ \\t>]*');
+		return text.replace(new RegExp(pattern), '');
+	}, content);
